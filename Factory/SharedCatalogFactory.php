@@ -65,14 +65,13 @@ class SharedCatalogFactory
             $indexResource = $this->getSharedCatalogCategoryResource();
             $connection = $indexResource->getConnection();
 
-            $query = "
-                SELECT category_id, GROUP_CONCAT(CONCAT(customer_group_id, '_', permission) SEPARATOR ',') AS permissions
-                FROM {$indexResource->getMainTable()} 
-                WHERE customer_group_id IN (SELECT customer_group_id FROM shared_catalog) 
-                GROUP BY category_id;
-            ";
+            $select = $connection->select()
+                ->from($indexResource->getMainTable(), [])
+                ->columns('category_id')
+                ->columns(['permissions' => new \Zend_Db_Expr("GROUP_CONCAT(CONCAT(customer_group_id, '_', permission) SEPARATOR ',')")])
+                ->group('category_id');
 
-            $this->sharedCategoryCollection = $connection->fetchPairs($query);
+            $this->sharedCategoryCollection = $connection->fetchPairs($select);
         }
 
         return $this->sharedCategoryCollection;
@@ -85,17 +84,22 @@ class SharedCatalogFactory
             $indexResource = $this->getSharedCatalogProductItemResource();
             $connection = $indexResource->getConnection();
 
-            $query = "
-                SELECT cpe.entity_id, GROUP_CONCAT(pi.customer_group_id SEPARATOR ',') as groups
-                FROM {$indexResource->getMainTable()} as pi
-                INNER JOIN {$this->getSharedCatalogResource()->getMainTable()} AS sc
-                ON sc.customer_group_id = pi.customer_group_id
-                LEFT JOIN {$indexResource->getTable('catalog_product_entity')} AS cpe
-                ON pi.sku = cpe.sku
-                GROUP BY pi.sku
-            ";
+            $select = $connection->select()
+                ->from(['pi' => $indexResource->getMainTable()], [])
+                ->columns('cpe.entity_id')
+                ->columns(['groups' => new \Zend_Db_Expr("GROUP_CONCAT(pi.customer_group_id SEPARATOR ',')")])
+                ->joinInner(
+                    ['sc' => $this->getSharedCatalogResource()->getMainTable()],
+                    'sc.customer_group_id = pi.customer_group_id',
+                    []
+                )
+                ->joinLeft(
+                    ['cpe' => $indexResource->getTable('catalog_product_entity')],
+                    'pi.sku = cpe.sku',
+                    []
+                )->group('pi.sku');
 
-            $productItems = $connection->fetchPairs($query);
+            $productItems = $connection->fetchPairs($select);
             $groups = $this->getSharedCatalogGroups();
 
             foreach ($productItems as $productId => $permissions) {
