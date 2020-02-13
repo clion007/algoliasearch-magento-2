@@ -48,7 +48,7 @@ class SharedCatalogFactory
     {
         return $this->objectManager->create('\Magento\SharedCatalog\Model\ResourceModel\Permission');
     }
-
+    
     public function getSharedCatalogResource()
     {
         return $this->objectManager->create('\Magento\SharedCatalog\Model\ResourceModel\SharedCatalog');
@@ -57,6 +57,17 @@ class SharedCatalogFactory
     public function getSharedCatalogConfig()
     {
         return $this->objectManager->create('\Magento\SharedCatalog\Model\Config');
+    }
+
+    private function getSharedCatalogCustomerGroups()
+    {
+        $sharedCatalogResource = $this->getSharedCatalogResource();
+        $connection = $sharedCatalogResource->getConnection();
+
+        $select = $connection->select()
+            ->from(($sharedCatalogResource->getMainTable()), ['customer_group_id']);
+
+        return $connection->fetchAll($select);
     }
 
     public function getSharedCategoryCollection()
@@ -69,6 +80,7 @@ class SharedCatalogFactory
                 ->from($indexResource->getMainTable(), [])
                 ->columns('category_id')
                 ->columns(['permissions' => new \Zend_Db_Expr("GROUP_CONCAT(CONCAT(customer_group_id, '_', permission) SEPARATOR ',')")])
+                ->where('customer_group_id IN (?)', $this->getSharedCatalogCustomerGroups())
                 ->group('category_id');
 
             $this->sharedCategoryCollection = $connection->fetchPairs($select);
