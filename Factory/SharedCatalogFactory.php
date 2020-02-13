@@ -48,7 +48,7 @@ class SharedCatalogFactory
     {
         return $this->objectManager->create('\Magento\SharedCatalog\Model\ResourceModel\Permission');
     }
-    
+
     public function getSharedCatalogResource()
     {
         return $this->objectManager->create('\Magento\SharedCatalog\Model\ResourceModel\SharedCatalog');
