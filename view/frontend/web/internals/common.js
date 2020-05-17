@@ -6,7 +6,8 @@ var algolia = {
 		'beforeInstantsearchInit',
 		'beforeWidgetInitialization',
 		'beforeInstantsearchStart',
-		'afterInstantsearchStart'
+		'afterInstantsearchStart',
+		'afterInsightsBindEvents'
 	],
 	registeredHooks: [],
 	registerHook: function (hookName, callback) {
@@ -176,15 +177,21 @@ requirejs(['algoliaBundle'], function(algoliaBundle) {
 			};
 
 			if (hit.__queryID) {
-				var insightsDataUrlString = $.param({
-					queryID: hit.__queryID,
-					objectID: hit.objectID,
-					indexName: hit.__indexName
-				});
-				if (hit.url.indexOf('?') > -1) {
-					hit.urlForInsights = hit.url + insightsDataUrlString
-				} else {
-					hit.urlForInsights = hit.url + '?' + insightsDataUrlString;
+
+				hit.urlForInsights = hit.url;
+
+				if (algoliaConfig.ccAnalytics.enabled
+					&& algoliaConfig.ccAnalytics.conversionAnalyticsMode !== 'disabled') {
+					var insightsDataUrlString = $.param({
+						queryID: hit.__queryID,
+						objectID: hit.objectID,
+						indexName: hit.__indexName
+					});
+					if (hit.url.indexOf('?') > -1) {
+						hit.urlForInsights += insightsDataUrlString
+					} else {
+						hit.urlForInsights += '?' + insightsDataUrlString;
+					}
 				}
 			}
 
@@ -479,6 +486,7 @@ requirejs(['algoliaBundle'], function(algoliaBundle) {
 		window.createISWidgetContainer = function (attributeName) {
 			var div = document.createElement('div');
 			div.className = 'is-widget-container-' + attributeName.split('.').join('_');
+			div.dataset.attr = attributeName;
 
 			return div;
 		};
